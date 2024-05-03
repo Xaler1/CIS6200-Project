@@ -562,6 +562,13 @@ def parse_args(input_args=None):
             " more information see https://huggingface.co/docs/accelerate/v0.17.0/en/package_reference/accelerator#accelerate.Accelerator"
         ),
     )
+    parser.add_argument(
+        "--lam",
+        type=float,
+        default=0.01,
+        required=False,
+        help="Coefficient on L2 loss term between CLIP embeddings",
+    )
 
     if input_args is not None:
         args = parser.parse_args(input_args)
@@ -972,7 +979,7 @@ def main(args):
     unet.to(accelerator.device, dtype=weight_dtype)
     text_encoder.to(accelerator.device, dtype=weight_dtype)
     # Change by Erik - added next line: Move text_encoder_controlnet to device
-    text_encoder_controlnet.to(accelerator.device, dtype=weight_dtype)
+    text_encoder_controlnet.to(accelerator.device, dtype=torch.float32)
 
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
@@ -1096,13 +1103,13 @@ def main(args):
                     target = noise_scheduler.get_velocity(latents, noise, timesteps)
                 else:
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
-                # Change by Erik - added next line and changed line after that - include L2 regularization on clip embeddings in loss
-                lam = 0.01
-                loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean") + lam * F.mse_loss(encoder_hidden_states.float(), encoder_hidden_states_controlnet.float(), reduction="mean")
+                # Change by Erik - changed next line - include L2 regularization on clip embeddings in loss
+                loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean") + args.lam * F.mse_loss(encoder_hidden_states.float(), encoder_hidden_states_controlnet.float(), reduction="mean")
 
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
-                    params_to_clip = controlnet.parameters()
+                    # Change by Erik - changed next line: make list of params to clip, including text_encoder_controlnet
+                    params_to_clip = list(controlnet.parameters()) + list(text_encoder_controlnet.parameters())
                     accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
                 optimizer.step()
                 lr_scheduler.step()
