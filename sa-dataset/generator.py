@@ -216,7 +216,7 @@ def get_chatgpt_annotation(img, masks, combination, prompt, mask_inverted):
             "type": "image_url",
             "image_url": {
                 "url": f"data:image/jpeg;base64,{encoded_masked}",
-                "detal": "low"
+                "detail": "low"
             }
         })
         masked = cv2.cvtColor(masked, cv2.COLOR_BGR2RGB)
@@ -280,9 +280,9 @@ def process_batch(i):
 def batch():
     destination = "train_split/"
     os.makedirs(destination, exist_ok=True)
-    start = 1000
-    n = 5000
-    with Pool(16) as p:
+    start = 11000
+    n = 11000
+    with Pool(8) as p:
         for line in tqdm(p.imap(process_batch, range(start, start + n)), total=n):
             if line:
                 with open(f"train_job.jsonl", "a", encoding="utf-8") as f:

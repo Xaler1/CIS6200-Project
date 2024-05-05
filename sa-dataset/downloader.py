@@ -20,12 +20,14 @@ for link in links:
     print(f"Extracting {file_name}...")
     with tarfile.open(file_name, "r:gz") as tar:
         for member in tqdm(tar.getmembers()):
-            tar.extract(member, path="data")
+            tar.extract(member, path="new_data")
 
     os.remove(file_name)
 
-files = os.listdir("data")
+files = os.listdir("new_data")
 for file in tqdm(files):
     # move images to images folder
     if file.endswith(".jpg"):
-        os.rename(f"data/{file}", f"images/{file}")
+        os.rename(f"new_data/{file}", f"images/{file}")
+    else:
+        os.rename(f"new_data/{file}", f"data/{file}")
