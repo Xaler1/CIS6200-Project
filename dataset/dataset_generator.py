@@ -38,8 +38,8 @@ def main(args):
     results = {"images": {}}
     kmeans = KMeans(n_clusters=10, n_init="auto")
 
-
-    for key in tqdm(data["images"]):
+    pbar = tqdm(data["images"])
+    for key in pbar:
         image = data["images"][key]
         annotations = image["annotations"]
         viable_annotations = []
@@ -51,8 +51,11 @@ def main(args):
         if len(viable_annotations) < args.min_masks:
             continue
 
+        if not os.path.exists(f"data/{split}2017/{image['file_name']}"):
+            continue
         img = Image.open(f"data/{split}2017/{image['file_name']}")
         img_size = img.size
+        img = img.convert("RGB")
         if args.colorspace == "lab":
             img_color = colorkit.rgb2lab(img)
         elif args.colorspace == "yuv":
@@ -85,6 +88,7 @@ def main(args):
             mask = np.array(mask)
             combined_mask += mask * (i+1)
             pixels = np.array(img_color)[mask == 1]
+            if pixels.shape[0] < 10: continue
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 kmeans.fit(pixels)
